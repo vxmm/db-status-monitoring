@@ -1,0 +1,51 @@
+- hosts: windows
+  tasks:
+        - name: Copy Stored Procedure
+          win_template:
+            src: #//source//checkDBStatus.sql
+            dest: #//destination//checkDBStatus.sql
+        - name: Create Stored Procedure in SSMS
+          win_shell:
+            Invoke-Sqlcmd -InputFile #"//destination//checkDBStatus.sql"
+        - name: Copy call script for Stored Procedure
+          win_template:
+            src: #//source//runCheckDB.sql
+            dest: #//destination//runCheckDB.sql
+        - name: Create logs file for output
+          win_file:
+            path: C:\logs.txt
+            state: touch
+        - name: Allow full control for SQLSERVER user over C:\logs.txt
+          win_acl:
+            path: C:\logs.txt
+            user: #MSSQL USER
+            type: allow
+            rights: FullControl
+        - name: Copy Task Scheduler script
+          win_template:
+            src: #//source//taskSched.ps1
+            dest: #//destination//taskSched.ps1
+        - name: Run Task Scheduler script
+          win_shell:
+             powershell.exe -ExecutionPolicy Bypass -File #//destination//taskSched.ps1"
+        - name: Add first line to Splunk monitor (I)
+          win_lineinfile:
+            path: #//path_to_inputs.conf//
+            line: '[monitor://C:\logs.txt]'
+            backrefs: no
+            create: yes
+            state: present
+        - name: Add second line to Splunk monitor (II)
+          win_lineinfile:
+            path: #//path_to_inputs.conf//
+            line: 'disabled=false'
+            backrefs: no
+            create: yes
+            state: present
+        - name: Add second line to Splunk monitor (III)
+          win_lineinfile:
+            path: #//path_to_inputs.conf//
+            line: 'sourcetype = db_status'
+            backrefs: no
+            create: yes
+            state: present
